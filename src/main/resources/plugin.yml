@@ -1,0 +1,11 @@
+name: ExtendedBanners
+version: '1.0.0'
+main: com.calladius.extendedBanners.ExtendedBanners
+api-version: '1.21'
+commands:
+  extbanner:
+    description: Open the Extended Banners GUI
+    usage: /extbanner
+    aliases: /ex
+    permission: extendedbanners.use
+    permission-message: Вы не можете использовать эту команду.

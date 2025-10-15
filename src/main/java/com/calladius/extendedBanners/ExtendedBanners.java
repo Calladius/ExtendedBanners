@@ -31,12 +31,12 @@ import org.bukkit.block.banner.PatternType;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import net.kyori.adventure.text.event.ClickEvent;
 
 import java.util.*;
 
 /**
  * ExtendedBanners - Paper плагин для создания баннеров без ограничения в 6 паттернов
- * Клиент: нужен мод Infinite Banner Patterns для отображения >6 паттернов
  */
 public class ExtendedBanners extends JavaPlugin implements Listener, CommandExecutor {
 
@@ -83,15 +83,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
         openMainGUI(p);
         return true;
     }
-
-    /**
-     * Попытаться распарсить строку спецификации и загрузить в pendingBase/pendingPatterns.
-     * Поддерживает формат вида:
-     *   black_banner[banner_patterns=[{pattern:"minecraft:gradient_up",color:"red"}, {pattern:"minecraft:creeper",color:"black"}]]
-     *
-     * Возвращает true если парсинг прошёл (хотя бы один паттерн распознан) — в этом случае метод
-     * откроет GUI (preview) для игрока. Если false — означает, что ничего не распознано/ошибка.
-     */
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
@@ -162,11 +153,19 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                 List.of(
                         Component.text("Extended Banners v1.0", NamedTextColor.GRAY),
                         Component.empty(),
-                        Component.text("• Создавайте баннеры с любым", NamedTextColor.GRAY),
-                        Component.text("  количеством паттернов", NamedTextColor.GRAY),
+                        Component.text("Как пользоваться:", NamedTextColor.YELLOW),
+                        Component.text("• /extbanner — открыть дизайнер", NamedTextColor.GRAY),
+                        Component.text("• Клик по «Базовый баннер» — выбрать цвет (баннер нужен в инвентаре)", NamedTextColor.GRAY),
+                        Component.text("• Добавляйте паттерны → затем выбирайте цвет краски", NamedTextColor.GRAY),
+                        Component.text("• Некоторые паттерны требуют специального", NamedTextColor.GRAY),
+                        Component.text("  предмета узора флага в инвентаре (напр. CREEPER)", NamedTextColor.GRAY),
+                        Component.text("• Для создания баннера расходуются базовый баннер и красители", NamedTextColor.GRAY),
                         Component.empty(),
-                        Component.text("• Для >6 паттернов нужен мод:", NamedTextColor.GRAY),
-                        Component.text("  Infinite Banner Patterns", NamedTextColor.AQUA)
+                        // Кликабельный кредит/ссылка
+                        Component.text("Плагин создан ", NamedTextColor.GRAY)
+                                .append(Component.text("Calladius", NamedTextColor.GOLD)
+                                        .decorate(TextDecoration.BOLD)
+                                        .clickEvent(ClickEvent.openUrl("https://github.com/Calladius")))
                 )));
 
         pendingPatterns.putIfAbsent(p.getUniqueId(), new ArrayList<>());
@@ -196,13 +195,10 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             int slot = e.getRawSlot();
 
             if (slot == 11) {
-                // Выбор базового баннера
                 openBaseSelection(p);
             } else if (slot == 15) {
-                // Добавить паттерн
                 openPatternSelection(p);
             } else if (slot == 20) {
-                // Удалить последний паттерн
                 List<PatternData> list = pendingPatterns.get(p.getUniqueId());
                 if (list != null && !list.isEmpty()) {
                     PatternData removed = list.remove(list.size() - 1);
@@ -212,7 +208,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                     Bukkit.getScheduler().runTask(this, () -> openMainGUI(p));
                 }
             } else if (slot == 21) {
-                // Очистить все
                 List<PatternData> list = pendingPatterns.get(p.getUniqueId());
                 if (list != null && !list.isEmpty()) {
                     int count = list.size();
@@ -224,7 +219,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                     Bukkit.getScheduler().runTask(this, () -> openMainGUI(p));
                 }
             } else if (slot == 22) {
-                // Создать баннер
                 createFinalBanner(p);
             }
             return;
@@ -239,7 +233,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             Material chosen = clicked.getType();
             if (!chosen.name().endsWith("_BANNER")) return;
 
-            // Проверяем наличие баннера в инвентаре
             if (!hasItemInInventory(p, chosen, 1) && p.getGameMode() != GameMode.CREATIVE) {
                 p.sendMessage(Component.text("✗ У вас нет баннера ", NamedTextColor.RED)
                         .append(Component.text(formatName(chosen.name()), NamedTextColor.WHITE))
@@ -276,13 +269,11 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                 return;
             }
 
-            // проверяем, есть ли такой PatternType в реестре — если нет, сообщаем
             if (patternRegistry == null || patternRegistry.get(patternKey) == null) {
                 p.sendMessage(Component.text("✗ Ошибка: паттерн не найден в реестре: " + keyStr, NamedTextColor.RED));
                 return;
             }
 
-            // сохраняем выбор и открываем выбор цвета
             currentPatternSelection.put(p.getUniqueId(), patternKey);
             openColorSelection(p, patternKey);
             return;
@@ -298,7 +289,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             DyeColor dye = materialToDye(mat);
             if (dye == null) return;
 
-            // не удаляем currentPatternSelection сразу — сперва проверим все условия
             NamespacedKey patternKey = currentPatternSelection.get(p.getUniqueId());
             if (patternKey == null) {
                 p.sendMessage(Component.text("✗ Ошибка: паттерн не найден (повторите выбор)", NamedTextColor.RED));
@@ -306,8 +296,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                 return;
             }
 
-            // 1) Если для этого паттерна нужен special banner-pattern item (например CREEPER_BANNER_PATTERN),
-            //    проверяем его наличие в инвентаре (в survival). Если нет — возвращаем на экран выбора паттерна.
             Material requiredPatternItem = getBannerPatternMaterialFor(patternKey);
             if (requiredPatternItem != null && p.getGameMode() != GameMode.CREATIVE && !hasItemInInventory(p, requiredPatternItem, 1)) {
                 p.sendMessage(Component.text("✗ Для этого паттерна требуется предмет: ", NamedTextColor.RED)
@@ -317,7 +305,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                 return;
             }
 
-            // 2) Проверяем наличие краски — если нет, возвращаем игрока на выбор паттерна (не теряем выбранный паттерн)
             if (!hasItemInInventory(p, mat, 1) && p.getGameMode() != GameMode.CREATIVE) {
                 p.sendMessage(Component.text("✗ Нет краски ", NamedTextColor.RED)
                         .append(Component.text(formatName(dye.name()), NamedTextColor.WHITE))
@@ -327,7 +314,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                 return;
             }
 
-            // Если всё ок — добавляем паттерн и только затем удаляем временный выбор
             List<PatternData> list = pendingPatterns.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>());
             list.add(new PatternData(patternKey, dye));
             currentPatternSelection.remove(p.getUniqueId());
@@ -391,13 +377,11 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             NamespacedKey key = patternRegistry.getKey(pt);
             if (key == null) continue;
 
-            // Создаём preview баннер с текущими паттернами + новый паттерн
             ItemStack preview = new ItemStack(baseMat);
             BannerMeta bm = (BannerMeta) preview.getItemMeta();
             if (bm != null) {
                 List<Pattern> patterns = new ArrayList<>();
 
-                // Добавляем все текущие паттерны
                 for (PatternData pd : current) {
                     PatternType realPt = patternRegistry.get(pd.patternKey());
                     if (realPt != null) {
@@ -405,7 +389,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                     }
                 }
 
-                // Добавляем новый паттерн (белым цветом для preview)
                 patterns.add(new Pattern(DyeColor.WHITE, pt));
 
                 bm.setPatterns(patterns);
@@ -417,7 +400,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
                         Component.text("Клик — выбрать этот паттерн", NamedTextColor.GREEN)
                 ));
 
-                // Сохраняем ID паттерна в PDC
                 bm.getPersistentDataContainer().set(PDC_PATTERN_KEY, PersistentDataType.STRING, key.toString());
                 preview.setItemMeta(bm);
             }
@@ -497,7 +479,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
         Material baseMat = pendingBase.getOrDefault(id, Material.BLACK_BANNER);
         List<PatternData> patterns = pendingPatterns.getOrDefault(id, new ArrayList<>());
 
-        // Считаем необходимые материалы
         Map<Material, Integer> needed = new HashMap<>();
         needed.put(baseMat, 1);
 
@@ -506,7 +487,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             needed.put(dyeMat, needed.getOrDefault(dyeMat, 0) + 1);
         }
 
-        // Проверяем наличие
         List<Component> missing = new ArrayList<>();
         for (Map.Entry<Material, Integer> e : needed.entrySet()) {
             if (!hasItemInInventory(p, e.getKey(), e.getValue())) {
@@ -524,7 +504,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             return;
         }
 
-        // Снимаем предметы
         for (Map.Entry<Material, Integer> e : needed.entrySet()) {
             if (!removeItemsFromInventory(p, e.getKey(), e.getValue())) {
                 p.sendMessage(Component.text("✗ Ошибка при снятии: " + formatName(e.getKey().name()), NamedTextColor.RED));
@@ -532,7 +511,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             }
         }
 
-        // Создаём баннер
         ItemStack result = new ItemStack(baseMat);
         BannerMeta bm = (BannerMeta) result.getItemMeta();
 
@@ -563,7 +541,6 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
             result.setItemMeta(bm);
         }
 
-        // Очищаем состояние
         pendingPatterns.put(id, new ArrayList<>());
         pendingBase.remove(id);
 
@@ -632,13 +609,11 @@ public class ExtendedBanners extends JavaPlugin implements Listener, CommandExec
         main.setItem(13, preview);
     }
 
-    // возвращает соответствующий Material для banner pattern item, если таковой существует; иначе null
     private Material getBannerPatternMaterialFor(NamespacedKey patternKey) {
         if (patternKey == null) return null;
         String key = patternKey.getKey();
         if (key.isEmpty()) return null;
 
-        // Попытка сопоставить: CREEPER -> CREEPER_BANNER_PATTERN
         String candidate = key.toUpperCase(Locale.ROOT) + "_BANNER_PATTERN";
         try {
             return Material.valueOf(candidate);

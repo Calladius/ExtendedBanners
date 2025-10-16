@@ -40,8 +40,8 @@ import java.util.*;
  */
 public class ExtendedBanners extends JavaPlugin implements Listener, CommandExecutor {
 
-    private static final Component MAIN_TITLE = Component.text("Дизайнер Баннеров ", NamedTextColor.GOLD)
-            .append(Component.text("(Безлимитный)", NamedTextColor.GRAY));
+    private static final Component MAIN_TITLE = Component.text("ExtendedBanners ", NamedTextColor.GOLD)
+            .append(Component.text("(Unlimited)", NamedTextColor.GRAY));
     private static final Component PATTERN_TITLE = Component.text("Выберите паттерн", NamedTextColor.YELLOW);
     private static final Component COLOR_TITLE = Component.text("Выберите цвет краски", NamedTextColor.AQUA);
     private static final Component BASE_SELECT_TITLE = Component.text("Выберите базовый баннер", NamedTextColor.YELLOW);
